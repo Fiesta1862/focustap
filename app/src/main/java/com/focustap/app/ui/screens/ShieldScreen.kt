@@ -53,6 +53,7 @@ import kotlinx.coroutines.delay
 fun ShieldScreen(onFinished: () -> Unit) {
     val viewModel: FocusViewModel = viewModel()
     val state by viewModel.state.collectAsState()
+    val loaded by viewModel.loaded.collectAsState()
     val scanQr = rememberQrScanner()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
@@ -65,8 +66,8 @@ fun ShieldScreen(onFinished: () -> Unit) {
         }
     }
 
-    LaunchedEffect(state.isLocked) {
-        if (!state.isLocked) onFinished()
+    LaunchedEffect(loaded, state.isLocked) {
+        if (loaded && !state.isLocked) onFinished()
     }
 
     val elapsed = if (state.lockStartedAt > 0L) (now - state.lockStartedAt).coerceAtLeast(0L) else 0L

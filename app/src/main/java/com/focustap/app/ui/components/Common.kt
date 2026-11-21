@@ -2,11 +2,14 @@ package com.focustap.app.ui.components
 
 import android.Manifest
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.focustap.app.core.CrashLogger
 import com.focustap.app.core.FocusController
 import com.focustap.app.qr.QrManager
 import com.focustap.app.ui.theme.Line
@@ -42,11 +46,7 @@ fun rememberQrScanner(): () -> Unit {
         if (!payload.isNullOrBlank()) FocusController.onQrScanned(payload)
     }
     val requestCamera = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-            context.findActivity()?.let { activity ->
-                launcher.launch(QrManager.createScanIntent(activity))
-            }
-        }
+        if (granted) launchQrScanner(context, launcher)
     }
     return remember(launcher, requestCamera, context) {
         {
@@ -55,13 +55,31 @@ fun rememberQrScanner(): () -> Unit {
                 Manifest.permission.CAMERA,
             ) == PackageManager.PERMISSION_GRANTED
             if (hasCamera) {
-                context.findActivity()?.let { activity ->
-                    launcher.launch(QrManager.createScanIntent(activity))
-                }
+                launchQrScanner(context, launcher)
             } else {
-                requestCamera.launch(Manifest.permission.CAMERA)
+                runCatching { requestCamera.launch(Manifest.permission.CAMERA) }
+                    .onFailure { CrashLogger.record(it, "camera-permission") }
             }
         }
+    }
+}
+
+private fun launchQrScanner(context: Context, launcher: ActivityResultLauncher<Intent>) {
+    val activity = context.findActivity()
+    if (activity == null) {
+        CrashLogger.record(RuntimeException("No activity available to open the QR scanner"), "qr-scan")
+        Toast.makeText(context, "Could not open the QR scanner", Toast.LENGTH_SHORT).show()
+        return
+    }
+    runCatching {
+        val intent = QrManager.createScanIntent(activity)
+        if (activity.packageManager.resolveActivity(intent, 0) == null) {
+            throw ActivityNotFoundException("No app is available to scan QR codes")
+        }
+        launcher.launch(intent)
+    }.onFailure { throwable ->
+        CrashLogger.record(throwable, "qr-scan")
+        Toast.makeText(context, "Could not open the QR scanner", Toast.LENGTH_SHORT).show()
     }
 }
 

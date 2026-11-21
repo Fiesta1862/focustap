@@ -11,12 +11,12 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.focustap.app.core.CrashLogger
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
-import java.io.IOException
 
 val Context.focusDataStore: DataStore<Preferences> by preferencesDataStore(name = "focustap_prefs")
 
@@ -43,7 +43,10 @@ class FocusRepository(private val context: Context) {
     private val gson = Gson()
 
     val state: Flow<AppState> = context.focusDataStore.data
-        .catch { exception -> if (exception is IOException) emit(emptyPreferences()) else throw exception }
+        .catch { exception ->
+            CrashLogger.record(exception, "data-store-read")
+            emit(emptyPreferences())
+        }
         .map { prefs ->
             val now = System.currentTimeMillis()
             val window = prefs[Keys.EMERGENCY_WINDOW] ?: 0L

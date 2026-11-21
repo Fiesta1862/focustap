@@ -6,11 +6,14 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ServiceCompat
 import com.focustap.app.R
+import com.focustap.app.core.CrashLogger
 import com.focustap.app.core.FocusController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,11 +32,27 @@ class FocusLockService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        startForeground(NOTIFICATION_ID, buildNotification(0L))
+        val notification = buildNotification(0L)
+        val started = runCatching {
+            val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            } else {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_NONE
+            }
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, type)
+        }
+        if (started.isFailure) {
+            CrashLogger.record(
+                started.exceptionOrNull() ?: RuntimeException("Foreground service start failed"),
+                "foreground-service",
+            )
+            stopSelf()
+            return
+        }
         scope.launch {
             while (true) {
                 val snapshot = FocusController.cached
-                if (!snapshot.isLocked) {
+                if (FocusController.stateLoaded.value && !snapshot.isLocked) {
                     stopSelf()
                     break
                 }

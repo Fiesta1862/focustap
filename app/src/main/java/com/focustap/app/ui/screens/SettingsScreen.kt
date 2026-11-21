@@ -1,8 +1,10 @@
 package com.focustap.app.ui.screens
 
 import android.app.admin.DevicePolicyManager
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import com.focustap.app.blocking.FocusDeviceAdminReceiver
+import com.focustap.app.core.CrashLogger
 import com.focustap.app.core.FocusController
 import com.focustap.app.ui.FocusViewModel
 import com.focustap.app.ui.components.SectionCard
@@ -62,7 +65,9 @@ fun SettingsScreen(viewModel: FocusViewModel) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { refresh++ }
     androidx.compose.runtime.LaunchedEffect(Unit) {
         val file = File(context.filesDir, "crash-log.txt")
-        crashLog = if (file.exists()) file.readText() else null
+        crashLog = runCatching {
+            if (file.exists()) file.readText().take(12_000) else null
+        }.getOrNull()
         while (true) {
             now = System.currentTimeMillis()
             kotlinx.coroutines.delay(1_000L)
@@ -130,7 +135,7 @@ fun SettingsScreen(viewModel: FocusViewModel) {
             Text("Permissions", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
             PermissionLine("Accessibility service", accessibility) {
-                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                openSettingsIntent(context, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
             Spacer(Modifier.height(6.dp))
             PermissionLine("Device admin", deviceAdmin) {
@@ -143,11 +148,11 @@ fun SettingsScreen(viewModel: FocusViewModel) {
                         DevicePolicyManager.EXTRA_ADD_EXPLANATION,
                         "Allows FocusTap's strict mode to guard active sessions.",
                     )
-                context.startActivity(intent)
+                openSettingsIntent(context, intent)
             }
             Spacer(Modifier.height(6.dp))
             PermissionLine("NFC", FocusController.hasNfcHardware()) {
-                context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
+                openSettingsIntent(context, Intent(Settings.ACTION_NFC_SETTINGS))
             }
         }
 
@@ -238,6 +243,13 @@ fun SettingsScreen(viewModel: FocusViewModel) {
                 TextButton(onClick = { showCrashLog = false }) { Text("Close") }
             },
         )
+    }
+}
+
+private fun openSettingsIntent(context: Context, intent: Intent) {
+    runCatching { context.startActivity(intent) }.onFailure { throwable ->
+        CrashLogger.record(throwable, "settings-intent")
+        Toast.makeText(context, "This setting is not available on this device", Toast.LENGTH_SHORT).show()
     }
 }
 

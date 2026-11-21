@@ -18,11 +18,15 @@ import com.focustap.app.data.AppState
 import com.focustap.app.data.ESSENTIAL_PACKAGES
 import com.focustap.app.data.EmergencyResult
 import com.focustap.app.data.FocusRepository
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -35,7 +39,15 @@ object FocusController {
 
     private lateinit var app: Context
     private var repository: FocusRepository? = null
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        CrashLogger.record(throwable, "coroutine")
+        events.tryEmit("FocusTap hit an internal error")
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + exceptionHandler)
+
+    private val _stateLoaded = MutableStateFlow(false)
+    val stateLoaded: StateFlow<Boolean> = _stateLoaded.asStateFlow()
 
     @Volatile
     var cached: AppState = AppState()
@@ -60,7 +72,10 @@ object FocusController {
         app = context.applicationContext
         repository = FocusRepository(app)
         scope.launch {
-            readyRepository().state.collect { cached = it }
+            readyRepository().state.collect { state ->
+                cached = state
+                _stateLoaded.value = true
+            }
         }
     }
 

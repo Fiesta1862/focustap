@@ -17,6 +17,8 @@ class FocusViewModel : ViewModel() {
         initialValue = FocusController.cached,
     )
 
+    val loaded: StateFlow<Boolean> = FocusController.stateLoaded
+
     val events = FocusController.events
 
     fun startFocus(modeId: String? = null) = FocusController.startFocus(modeId)

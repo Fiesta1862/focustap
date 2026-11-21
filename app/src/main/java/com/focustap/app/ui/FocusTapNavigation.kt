@@ -60,7 +60,9 @@ fun FocusTapNavigation(viewModel: FocusViewModel = viewModel()) {
 
     LaunchedEffect(Unit) {
         val file = File(context.filesDir, "crash-log.txt")
-        if (file.exists()) crashLog = file.readText()
+        crashLog = runCatching {
+            if (file.exists()) file.readText().take(12_000) else null
+        }.getOrNull()
     }
 
     if (crashLog != null) {
