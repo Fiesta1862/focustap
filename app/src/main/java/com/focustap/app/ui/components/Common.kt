@@ -1,8 +1,10 @@
 package com.focustap.app.ui.components
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.focustap.app.core.FocusController
 import com.focustap.app.qr.QrManager
 import com.focustap.app.ui.theme.Line
@@ -38,10 +41,25 @@ fun rememberQrScanner(): () -> Unit {
         val payload = QrManager.parseResult(result.resultCode, result.data)
         if (!payload.isNullOrBlank()) FocusController.onQrScanned(payload)
     }
-    return remember(launcher, context) {
-        {
+    val requestCamera = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
             context.findActivity()?.let { activity ->
                 launcher.launch(QrManager.createScanIntent(activity))
+            }
+        }
+    }
+    return remember(launcher, requestCamera, context) {
+        {
+            val hasCamera = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (hasCamera) {
+                context.findActivity()?.let { activity ->
+                    launcher.launch(QrManager.createScanIntent(activity))
+                }
+            } else {
+                requestCamera.launch(Manifest.permission.CAMERA)
             }
         }
     }

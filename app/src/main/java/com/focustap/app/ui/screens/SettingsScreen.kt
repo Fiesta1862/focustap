@@ -46,6 +46,7 @@ import com.focustap.app.ui.FocusViewModel
 import com.focustap.app.ui.components.SectionCard
 import com.focustap.app.ui.theme.Accent
 import com.focustap.app.ui.theme.Success
+import java.io.File
 
 @Composable
 fun SettingsScreen(viewModel: FocusViewModel) {
@@ -55,9 +56,13 @@ fun SettingsScreen(viewModel: FocusViewModel) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var confirmReset by remember { mutableStateOf(false) }
     var showOwnerInfo by remember { mutableStateOf(false) }
+    var crashLog by remember { mutableStateOf<String?>(null) }
+    var showCrashLog by remember { mutableStateOf(false) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { refresh++ }
     androidx.compose.runtime.LaunchedEffect(Unit) {
+        val file = File(context.filesDir, "crash-log.txt")
+        crashLog = if (file.exists()) file.readText() else null
         while (true) {
             now = System.currentTimeMillis()
             kotlinx.coroutines.delay(1_000L)
@@ -178,6 +183,28 @@ fun SettingsScreen(viewModel: FocusViewModel) {
         Spacer(Modifier.height(14.dp))
 
         SectionCard {
+            Text("Diagnostics", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(8.dp))
+            if (crashLog.isNullOrBlank()) {
+                Text(
+                    "No crash has been recorded on this installation.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                Text(
+                    "FocusTap recorded a crash. You can view the details and send them with a bug report.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(onClick = { showCrashLog = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("View last crash log")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        SectionCard {
             Text("Data", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { confirmReset = true }, modifier = Modifier.fillMaxWidth()) {
@@ -199,6 +226,17 @@ fun SettingsScreen(viewModel: FocusViewModel) {
                 }) { Text("Reset", color = Accent) }
             },
             dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Cancel") } },
+        )
+    }
+
+    if (showCrashLog && crashLog != null) {
+        AlertDialog(
+            onDismissRequest = { showCrashLog = false },
+            title = { Text("Last crash") },
+            text = { Text(crashLog.orEmpty(), fontFamily = FontFamily.Monospace) },
+            confirmButton = {
+                TextButton(onClick = { showCrashLog = false }) { Text("Close") }
+            },
         )
     }
 }
