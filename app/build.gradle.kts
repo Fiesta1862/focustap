@@ -76,7 +76,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("com.google.code.gson:gson:2.11.0")
-    implementation("com.journeyapps:zxing-android-embedded:4.6.0") {
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0") {
         exclude(group = "com.android.support")
     }
 
