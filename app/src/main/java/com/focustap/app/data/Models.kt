@@ -106,8 +106,8 @@ val DEFAULT_MODES: List<FocusMode> = listOf(
     ),
 )
 
-fun String.isSameMonthAs(other: Long): Boolean {
-    val a = java.util.Calendar.getInstance().apply { timeInMillis = System.currentTimeMillis() }
+fun Long.isSameMonthAs(other: Long): Boolean {
+    val a = java.util.Calendar.getInstance().apply { timeInMillis = this@isSameMonthAs }
     val b = java.util.Calendar.getInstance().apply { timeInMillis = other }
     return a.get(java.util.Calendar.YEAR) == b.get(java.util.Calendar.YEAR) &&
         a.get(java.util.Calendar.MONTH) == b.get(java.util.Calendar.MONTH)

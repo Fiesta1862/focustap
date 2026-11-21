@@ -1,5 +1,6 @@
 package com.focustap.app.core
 
+import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -9,7 +10,6 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.Settings
-import androidx.core.content.getSystemService
 import com.focustap.app.blocking.FocusDeviceAdminReceiver
 import com.focustap.app.blocking.FocusGuardService
 import com.focustap.app.blocking.FocusLockService
@@ -292,8 +292,8 @@ object FocusController {
         }
     }
 
-    private fun devicePolicyManager(): android.app.DevicePolicyManager =
-        app.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.DevicePolicyManager
+    private fun devicePolicyManager(): DevicePolicyManager =
+        app.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
 
     private fun startLockService() {
         if (!::app.isInitialized) return
@@ -317,14 +317,20 @@ object FocusController {
     fun haptic() {
         if (!::app.isInitialized) return
         try {
-            val effect = VibrationEffect.createOneShot(28, VibrationEffect.DEFAULT_AMPLITUDE)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val manager = app.getSystemService<VibratorManager>(Context.VIBRATOR_MANAGER_SERVICE)
-                manager?.defaultVibrator?.vibrate(effect)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val effect = VibrationEffect.createOneShot(28, VibrationEffect.DEFAULT_AMPLITUDE)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val manager = app.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                    manager?.defaultVibrator?.vibrate(effect)
+                } else {
+                    @Suppress("DEPRECATION")
+                    val vibrator = app.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                    vibrator?.vibrate(effect)
+                }
             } else {
                 @Suppress("DEPRECATION")
-                val vibrator = app.getSystemService<Vibrator>(Context.VIBRATOR_SERVICE)
-                vibrator?.vibrate(effect)
+                val vibrator = app.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                vibrator?.vibrate(28L)
             }
         } catch (_: Exception) {
         }

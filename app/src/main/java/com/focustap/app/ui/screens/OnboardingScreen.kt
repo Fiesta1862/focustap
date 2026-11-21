@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -134,7 +135,7 @@ fun OnboardingScreen(viewModel: FocusViewModel) {
 }
 
 private fun Modifier.androidBackground(color: Color, shape: androidx.compose.ui.graphics.Shape): Modifier =
-    this.then(androidx.compose.foundation.background(color, shape))
+    this.background(color, shape)
 
 @Composable
 private fun OnboardingWelcome(onNext: () -> Unit) {
