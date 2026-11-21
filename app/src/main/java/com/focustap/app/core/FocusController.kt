@@ -207,6 +207,17 @@ object FocusController {
 
     fun finishOnboarding() = scope.launch { readyRepository().setOnboardingComplete() }
 
+    /** Restores an active session after reboot once persisted state has loaded. */
+    fun restoreAfterBoot() {
+        if (!::app.isInitialized) return
+        scope.launch {
+            if (readyRepository().state.first().isLocked) {
+                startLockService()
+                launchShield()
+            }
+        }
+    }
+
     fun resetEmergencyAllowance() = scope.launch {
         readyRepository().resetEmergencyAllowance()
         events.tryEmit("Emergency unlocks reset")

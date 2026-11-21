@@ -1,8 +1,13 @@
 package com.focustap.app.ui.screens
 
-import android.app.admin.DeviceAdminReceiver
+import android.Manifest
+import android.app.admin.DevicePolicyManager
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LifecycleEventEffect
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,12 +58,24 @@ fun OnboardingScreen(viewModel: FocusViewModel) {
     val context = LocalContext.current
     var step by remember { mutableIntStateOf(0) }
     var refresh by remember { mutableIntStateOf(0) }
+    val requestNotifications = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { refresh++ }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { refresh++ }
 
     val accessibility by remember(refresh) { mutableStateOf(FocusController.isAccessibilityEnabled()) }
     val deviceAdmin by remember(refresh) { mutableStateOf(FocusController.isDeviceAdminActive()) }
     val nfc by remember(refresh) { mutableStateOf(FocusController.hasNfcHardware()) }
+    val notifications by remember(refresh) {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED,
+        )
+    }
 
     Box(Modifier.fillMaxSize()) {
         AnimatedContent(targetState = step, label = "onboarding-step") { current ->
@@ -67,8 +85,14 @@ fun OnboardingScreen(viewModel: FocusViewModel) {
                     accessibility = accessibility,
                     deviceAdmin = deviceAdmin,
                     nfc = nfc,
+                    notifications = notifications,
                     onOpen = { intent ->
                         runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    },
+                    onRequestNotifications = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
                     },
                     onNext = { step = 2 },
                 )
@@ -148,7 +172,9 @@ private fun OnboardingPermissions(
     accessibility: Boolean,
     deviceAdmin: Boolean,
     nfc: Boolean,
+    notifications: Boolean,
     onOpen: (Intent) -> Unit,
+    onRequestNotifications: () -> Unit,
     onNext: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(28.dp)) {
@@ -172,10 +198,15 @@ private fun OnboardingPermissions(
                 subtitle = "Required for strict mode safeguards",
                 granted = deviceAdmin,
                 action = {
-                    val intent = Intent(Settings.ACTION_DEVICE_ADMIN_SETTINGS).putExtra(
-                        DeviceAdminReceiver.EXTRA_DEVICE_ADMIN,
-                        FocusDeviceAdminReceiver.component(LocalContext.current),
-                    )
+                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                        .putExtra(
+                            DevicePolicyManager.EXTRA_DEVICE_ADMIN,
+                            FocusDeviceAdminReceiver.componentName(context),
+                        )
+                        .putExtra(
+                            DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                            "Allows FocusTap's strict mode to guard active sessions.",
+                        )
                     onOpen(intent)
                 },
             )
@@ -185,6 +216,13 @@ private fun OnboardingPermissions(
                 subtitle = if (nfc) "NFC hardware available" else "Optional — QR anchor works too",
                 granted = nfc,
                 action = { onOpen(Intent(Settings.ACTION_NFC_SETTINGS)) },
+            )
+            Spacer(Modifier.height(14.dp))
+            PermissionRow(
+                title = "Notifications",
+                subtitle = "Shows the active session timer and shield shortcut",
+                granted = notifications,
+                action = onRequestNotifications,
             )
         }
 

@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -73,7 +74,7 @@ class FocusRepository(private val context: Context) {
             fallback
         } else {
             try {
-                gson.fromJson(raw, T::class.java) ?: fallback
+                gson.fromJson<T>(raw, object : TypeToken<T>() {}.type) ?: fallback
             } catch (_: Exception) {
                 fallback
             }

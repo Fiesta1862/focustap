@@ -12,9 +12,6 @@ class BootReceiver : BroadcastReceiver() {
             intent.action != "android.intent.action.LOCKED_BOOT_COMPLETED"
         ) return
         FocusController.init(context)
-        if (FocusController.cached.isLocked) {
-            FocusController.launchShield()
-            context.startForegroundService(Intent(context, FocusLockService::class.java))
-        }
+        FocusController.restoreAfterBoot()
     }
 }

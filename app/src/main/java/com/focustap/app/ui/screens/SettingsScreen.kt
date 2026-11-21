@@ -1,6 +1,6 @@
 package com.focustap.app.ui.screens
 
-import android.app.admin.DeviceAdminReceiver
+import android.app.admin.DevicePolicyManager
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +26,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LifecycleEventEffect
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -129,10 +129,15 @@ fun SettingsScreen(viewModel: FocusViewModel) {
             }
             Spacer(Modifier.height(6.dp))
             PermissionLine("Device admin", deviceAdmin) {
-                val intent = Intent(Settings.ACTION_DEVICE_ADMIN_SETTINGS).putExtra(
-                    DeviceAdminReceiver.EXTRA_DEVICE_ADMIN,
-                    FocusDeviceAdminReceiver.component(context),
-                )
+                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                    .putExtra(
+                        DevicePolicyManager.EXTRA_DEVICE_ADMIN,
+                        FocusDeviceAdminReceiver.componentName(context),
+                    )
+                    .putExtra(
+                        DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                        "Allows FocusTap's strict mode to guard active sessions.",
+                    )
                 context.startActivity(intent)
             }
             Spacer(Modifier.height(6.dp))
