@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FocusTap</string>
+    <string name="device_admin_label">FocusTap Strict Mode</string>
+    <string name="device_admin_description">Lets FocusTap keep your session active, lock the device when someone tries to disable it, and resist uninstall attempts on supported devices.</string>
+    <string name="accessibility_description">FocusTap uses this service to detect when a blocked app opens so it can show your focus shield. It never reads screen content.</string>
+    <string name="focus_notification_channel">Focus sessions</string>
+    <string name="focus_notification_title">Focus session active</string>
+</resources>
