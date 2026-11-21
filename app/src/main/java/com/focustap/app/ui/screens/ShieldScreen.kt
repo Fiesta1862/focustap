@@ -76,7 +76,7 @@ fun ShieldScreen(onFinished: () -> Unit) {
         initialValue = 1f,
         targetValue = 1.07f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1_400L, easing = FastOutSlowInEasing),
+            animation = tween(1_400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "shield-scale",

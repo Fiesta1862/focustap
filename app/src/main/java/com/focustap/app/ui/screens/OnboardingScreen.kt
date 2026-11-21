@@ -177,6 +177,7 @@ private fun OnboardingPermissions(
     onRequestNotifications: () -> Unit,
     onNext: () -> Unit,
 ) {
+    val context = LocalContext.current
     Column(Modifier.fillMaxSize().padding(28.dp)) {
         Spacer(Modifier.height(40.dp))
         Text("Permissions", style = MaterialTheme.typography.headlineMedium)
